@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: lawnidhi
+Version: 0.1.0
+Summary: NGT Order Scraper & Legal Case Portfolio Manager
+Requires-Python: >=3.10
+Requires-Dist: pydantic>=2.4.0
+Requires-Dist: pdfplumber>=0.11.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: beautifulsoup4>=4.12.2

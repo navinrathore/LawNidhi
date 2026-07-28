@@ -1,0 +1,2 @@
+[console_scripts]
+lawnidhi = cli:main
