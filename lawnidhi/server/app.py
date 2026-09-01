@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from lawnidhi.graph.store import LegalGraphStore
 from lawnidhi.server.routes.graph import router as graph_router
 from lawnidhi.server.routes.orders import router as orders_router
+from lawnidhi.server.routes.rag import router as rag_router
 
 
 def get_default_db_path() -> str:
@@ -56,6 +57,7 @@ def create_app(db_path: str = None) -> FastAPI:
     # Register API routers
     app.include_router(graph_router)
     app.include_router(orders_router)
+    app.include_router(rag_router)
 
     @app.get("/", summary="API Root", tags=["System"])
     def root() -> Dict[str, str]:
