@@ -24,6 +24,7 @@ RelationType = Literal[
     "LISTED_AT",
     "HEARD_AT",
     "PRESIDED_BY",
+    "DELIVERED_BY",
     "HELD_IN",
     "REPRESENTS",
     "APPEARED_IN",
@@ -33,8 +34,48 @@ RelationType = Literal[
     "ISSUED_DIRECTION",
     "IMPOSED_PENALTY",
     "CONTAINS_ORDER",
-    "FOLLOWS_HEARING"
+    "FOLLOWS_HEARING",
+    "UPHELD_ORDER",
+    "OVERRULED"
 ]
+
+
+class StatuteReference(BaseModel):
+    """Represents a specific statutory act and section reference."""
+    act_name: str = Field(description="Normalized name of the statutory Act (e.g. 'National Green Tribunal Act, 2010')")
+    section: str = Field(description="Section or rule number (e.g. '14', '15', '33A')")
+    sub_section: Optional[str] = Field(default=None, description="Optional sub-section or clause")
+    raw_match: Optional[str] = Field(default=None, description="Original verbatim matched string")
+
+
+class PrecedentCitation(BaseModel):
+    """Represents a cited precedent case."""
+    case_title: str = Field(description="Title of cited precedent case (e.g. 'Vellore Citizens Welfare Forum')")
+    citation: Optional[str] = Field(default=None, description="Standard reporter citation (e.g. '(1996) 5 SCC 647')")
+    court: Optional[str] = Field(default="Supreme Court of India", description="Court that delivered the precedent")
+    year: Optional[int] = Field(default=None, description="Decision year if known")
+
+
+class JudicialDirection(BaseModel):
+    """Represents a direction, penalty, or committee constitution in an order."""
+    direction_text: str = Field(description="Substantive text of the judicial direction or order")
+    direction_type: Literal["PENALTY", "COMMITTEE", "COMPLIANCE", "STAY", "GENERAL"] = Field(
+        default="GENERAL", description="Categorization of the direction"
+    )
+    target_entity: Optional[str] = Field(default=None, description="Entity or authority directed")
+
+
+class OrderExtractionResult(BaseModel):
+    """Container holding structured extraction results from a judicial order/judgment."""
+    case_id: Optional[str] = Field(default=None, description="Normalized Case ID in graph")
+    case_name: str = Field(description="Case title or number from header")
+    order_date: Optional[str] = Field(default=None, description="Date of order in YYYY-MM-DD format")
+    court_number: Optional[str] = Field(default=None, description="Court / Bench number")
+    bench_judges: List[str] = Field(default_factory=list, description="Presiding coram judges")
+    counsels: List[str] = Field(default_factory=list, description="Advocates appearing in the order")
+    invoked_statutes: List[StatuteReference] = Field(default_factory=list, description="Extracted statutory provisions")
+    cited_precedents: List[PrecedentCitation] = Field(default_factory=list, description="Extracted precedent citations")
+    directions: List[JudicialDirection] = Field(default_factory=list, description="Extracted judicial directions/penalties")
 
 
 def normalize_hearing_id(hearing_date: str, court_no: str, list_type: str = "Final") -> str:

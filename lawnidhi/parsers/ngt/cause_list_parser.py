@@ -105,7 +105,8 @@ class NGTCauseListParser(BaseParser):
             cases=cases
         )
 
-    def _clean_counsel_name(self, name: str) -> str:
+    @staticmethod
+    def _clean_counsel_name(name: str) -> str:
         """Strip honorifics, role qualifiers, and extra whitespace from an advocate's name."""
         name = re.sub(r'^(?:Adv\.|Advocate|Mr\.|Ms\.|Mrs\.|Sh\.|Dr\.|Smt\.|Sr\.\s*Adv\.)\s*', '', name, flags=re.IGNORECASE)
         name = re.sub(r'\(.*?\)', '', name)

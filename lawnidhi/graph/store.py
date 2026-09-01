@@ -222,11 +222,45 @@ class LegalGraphStore:
             })
         return results
 
-    def find_connected_precedents(self, case_id: str) -> List[Dict[str, Any]]:
+    def resolve_case_id(self, case_id_or_number: str) -> Optional[str]:
+        """Resolve a user-provided case number or string to a canonical graph Case ID."""
+        clean_input = case_id_or_number.strip()
+        direct_id = normalize_entity_id("CASE", f"OA {clean_input}")
+        direct = self.conn.execute("MATCH (c:LegalEntity {id: $id, entity_type: 'CASE'}) RETURN c.id", {"id": direct_id})
+        if direct.has_next():
+            return direct.get_next()[0]
+
+        # Exact match on id
+        direct2 = self.conn.execute("MATCH (c:LegalEntity {id: $id, entity_type: 'CASE'}) RETURN c.id", {"id": clean_input})
+        if direct2.has_next():
+            return direct2.get_next()[0]
+
+        # Fuzzy match on case number / year pattern
+        clean_num = clean_input.replace("/", " ").replace("-", " ")
+        tokens = [t.lower() for t in clean_num.split() if t.strip()]
+        if tokens:
+            pat = tokens[0]
+            year_pat = tokens[1] if len(tokens) > 1 else ""
+            if year_pat:
+                res = self.conn.execute(
+                    "MATCH (c:LegalEntity {entity_type: 'CASE'}) WHERE (c.id CONTAINS $pat OR c.name CONTAINS $pat) AND (c.id CONTAINS $year OR c.name CONTAINS $year) RETURN c.id LIMIT 1",
+                    {"pat": pat, "year": year_pat}
+                )
+            else:
+                res = self.conn.execute(
+                    "MATCH (c:LegalEntity {entity_type: 'CASE'}) WHERE c.id CONTAINS $pat OR c.name CONTAINS $pat OR c.name CONTAINS $raw RETURN c.id LIMIT 1",
+                    {"pat": pat, "raw": clean_input}
+                )
+            if res.has_next():
+                return res.get_next()[0]
+        return None
+
+    def find_connected_precedents(self, case_id_or_number: str) -> List[Dict[str, Any]]:
         """Multi-hop traversal: Find all cited precedents and invoked statutes for a case."""
+        case_id = self.resolve_case_id(case_id_or_number) or case_id_or_number
         query = """
             MATCH (c:LegalEntity {id: $case_id})-[r1:RelatesTo]->(target:LegalEntity)
-            WHERE r1.relation_type IN ['CITES_PRECEDENT', 'INVOKES_STATUTE']
+            WHERE r1.relation_type IN ['CITES_PRECEDENT', 'INVOKES_STATUTE', 'UPHELD_ORDER', 'OVERRULED']
             OPTIONAL MATCH (target)-[r2:RelatesTo]->(sub_target:LegalEntity)
             RETURN target.id, target.name, target.entity_type, r1.relation_type, 
                    sub_target.id, sub_target.name, sub_target.entity_type, r2.relation_type
@@ -672,6 +706,186 @@ class LegalGraphStore:
             G.add_edge(row[0], row[1], relation_type=row[2], weight=row[3], **props)
 
         return G
+
+    def get_counsel_portfolio(self, counsel_id_or_name: str) -> Dict[str, Any]:
+        """Aggregate the lifetime representation portfolio for a counsel."""
+        counsel_id = normalize_entity_id("COUNSEL", counsel_id_or_name)
+        clean_search = counsel_id_or_name.replace(".", " ").strip().lower()
+        tokens = [t for t in clean_search.split() if len(t) > 2]
+        token_pattern = tokens[0] if tokens else clean_search
+
+        matches = self.conn.execute(
+            "MATCH (c:LegalEntity {entity_type: 'COUNSEL'}) WHERE c.id CONTAINS $pat OR c.id CONTAINS $cid OR c.name CONTAINS $raw RETURN c.id, c.name",
+            {"pat": token_pattern, "cid": counsel_id, "raw": counsel_id_or_name.strip()}
+        )
+        matched_counsels = []
+        while matches.has_next():
+            row = matches.get_next()
+            matched_counsels.append((row[0], row[1]))
+
+        if not matched_counsels:
+            return {"counsel_name": counsel_id_or_name, "total_cases": 0, "cases": [], "distinct_judges": [], "distinct_parties": []}
+
+        all_cases = {}
+        judges_seen = set()
+        parties_seen = set()
+
+        for cid, cname in matched_counsels:
+            # 1. Fetch all cases represented by this counsel
+            c_res = self.conn.execute(
+                "MATCH (counsel:LegalEntity {id: $cid})-[r:RelatesTo {relation_type: 'REPRESENTS'}]->(c:LegalEntity) RETURN c.id, c.name",
+                {"cid": cid}
+            )
+            while c_res.has_next():
+                row = c_res.get_next()
+                case_id, case_name = row[0], row[1]
+                if case_id not in all_cases:
+                    all_cases[case_id] = {
+                        "case_id": case_id,
+                        "case_name": case_name,
+                        "court_no": "-",
+                        "last_hearing": "-",
+                        "judge": "-",
+                    }
+
+            # 2. Fetch all parties
+            p_res = self.conn.execute(
+                "MATCH (counsel:LegalEntity {id: $cid})-[:RelatesTo {relation_type: 'REPRESENTS'}]->(c:LegalEntity)<-[:RelatesTo {relation_type: 'PARTY_TO'}]-(p:LegalEntity) RETURN DISTINCT p.name",
+                {"cid": cid}
+            )
+            while p_res.has_next():
+                p_name = p_res.get_next()[0]
+                if p_name:
+                    parties_seen.add(p_name)
+
+            # 3. Fetch judges and hearings
+            h_res = self.conn.execute(
+                "MATCH (counsel:LegalEntity {id: $cid})-[:RelatesTo {relation_type: 'REPRESENTS'}]->(c:LegalEntity)-[l:RelatesTo {relation_type: 'LISTED_AT'}]->(h:LegalEntity) OPTIONAL MATCH (h)-[:RelatesTo {relation_type: 'PRESIDED_BY'}]->(j:LegalEntity) RETURN c.id, h.properties, j.name",
+                {"cid": cid}
+            )
+            while h_res.has_next():
+                row = h_res.get_next()
+                c_id = row[0]
+                h_props = json.loads(row[1]) if row[1] else {}
+                j_name = row[2]
+                if j_name:
+                    judges_seen.add(j_name)
+                if c_id in all_cases:
+                    all_cases[c_id]["court_no"] = h_props.get("court_no", all_cases[c_id]["court_no"])
+                    all_cases[c_id]["last_hearing"] = h_props.get("date", all_cases[c_id]["last_hearing"])
+                    all_cases[c_id]["judge"] = j_name or all_cases[c_id]["judge"]
+
+        return {
+            "counsel_name": matched_counsels[0][1] if matched_counsels else counsel_id_or_name,
+            "total_cases": len(all_cases),
+            "cases": list(all_cases.values()),
+            "distinct_judges": sorted(list(judges_seen)),
+            "distinct_parties": sorted(list(parties_seen)),
+        }
+
+    def get_judge_caseload(self, judge_name_or_id: str) -> Dict[str, Any]:
+        """Aggregate hearings and cases presided over by a judge."""
+        clean_search = judge_name_or_id.replace(".", " ").strip().lower()
+        tokens = [t for t in clean_search.split() if len(t) > 2]
+        token_pattern = tokens[0] if tokens else clean_search
+
+        matches = self.conn.execute(
+            "MATCH (j:LegalEntity {entity_type: 'JUDGE'}) WHERE j.name CONTAINS $raw OR j.id CONTAINS $pat RETURN j.id, j.name",
+            {"pat": token_pattern, "raw": judge_name_or_id.strip()}
+        )
+        matched_judges = []
+        while matches.has_next():
+            row = matches.get_next()
+            matched_judges.append((row[0], row[1]))
+
+        if not matched_judges:
+            return {"judge_name": judge_name_or_id, "total_hearings": 0, "total_cases": 0, "hearings": []}
+
+        judge_id, judge_name = matched_judges[0]
+        query = """
+            MATCH (h:LegalEntity {entity_type: 'HEARING'})-[r:RelatesTo {relation_type: 'PRESIDED_BY'}]->(j:LegalEntity {id: $judge_id})
+            MATCH (c:LegalEntity {entity_type: 'CASE'})-[l:RelatesTo {relation_type: 'LISTED_AT'}]->(h)
+            RETURN h.id, h.properties, c.id, c.name, l.properties
+        """
+        res = self.conn.execute(query, {"judge_id": judge_id})
+        hearings_map = {}
+        unique_cases = set()
+
+        while res.has_next():
+            row = res.get_next()
+            h_id = row[0]
+            h_props = json.loads(row[1]) if row[1] else {}
+            case_id = row[2]
+            case_name = row[3]
+            l_props = json.loads(row[4]) if row[4] else {}
+
+            unique_cases.add(case_id)
+            h_entry = hearings_map.setdefault(h_id, {
+                "hearing_id": h_id,
+                "date": h_props.get("date", "-"),
+                "court_no": h_props.get("court_no", "-"),
+                "list_type": h_props.get("list_type", "-"),
+                "cases_count": 0,
+                "items": []
+            })
+            h_entry["cases_count"] += 1
+            h_entry["items"].append({
+                "item_number": l_props.get("item_number", "-"),
+                "case_name": case_name
+            })
+
+        return {
+            "judge_name": judge_name,
+            "total_hearings": len(hearings_map),
+            "total_cases": len(unique_cases),
+            "hearings": sorted(list(hearings_map.values()), key=lambda x: x["date"], reverse=True)
+        }
+
+    def execute_raw_cypher(self, query: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Execute a raw openCypher query safely and return columns and rows."""
+        res = self.conn.execute(query, params or {})
+        rows = []
+        while res.has_next():
+            rows.append(res.get_next())
+        return {
+            "query": query,
+            "row_count": len(rows),
+            "rows": rows
+        }
+
+    def export_graph_format(self, format_type: str = "json") -> str:
+        """Export graph topology in JSON node-link format, DOT (Graphviz), or GEXF."""
+        G = self.export_networkx_graph()
+        format_clean = format_type.lower().strip()
+
+        if format_clean == "json":
+            from networkx.readwrite import json_graph
+            data = json_graph.node_link_data(G)
+            return json.dumps(data, indent=2, default=str)
+        elif format_clean in ("dot", "graphviz"):
+            from networkx.drawing.nx_pydot import to_pydot
+            try:
+                pydot_g = to_pydot(G)
+                return pydot_g.to_string()
+            except ImportError:
+                # Fallback manual DOT generator
+                lines = ["digraph LegalKnowledgeGraph {"]
+                for n, d in G.nodes(data=True):
+                    label = d.get("name", n).replace('"', '\\"')
+                    etype = d.get("entity_type", "ENTITY")
+                    lines.append(f'  "{n}" [label="{label}" type="{etype}"];')
+                for u, v, d in G.edges(data=True):
+                    rel = d.get("relation_type", "RELATES_TO")
+                    lines.append(f'  "{u}" -> "{v}" [label="{rel}"];')
+                lines.append("}")
+                return "\n".join(lines)
+        elif format_clean == "gexf":
+            import io
+            buf = io.BytesIO()
+            nx.write_gexf(G, buf)
+            return buf.getvalue().decode("utf-8")
+        else:
+            raise ValueError(f"Unsupported format: '{format_type}'. Choose 'json', 'dot', or 'gexf'.")
 
     def sync_from_sqlite(self, sqlite_db_path: str) -> int:
         """Synchronize cases, counsels, and parties from LawNidhi's SQLite database.
