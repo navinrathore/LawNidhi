@@ -16,7 +16,7 @@ class NGTCauseListScraper:
     """Scraper for NGT Chairperson Bench cause lists."""
     
     BASE_URL = "https://www.greentribunal.gov.in/principal-chairperson-bench"
-    DOWNLOAD_DIR = "data/cause_lists"
+    DOWNLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "cause_lists")
 
     def __init__(self):
         os.makedirs(self.DOWNLOAD_DIR, exist_ok=True)
@@ -122,50 +122,65 @@ class NGTCauseListScraper:
         skipped_count = 0
         processed_count = 0
         
-        for link in links:
-            if link['date'] < start_date:
-                continue
-                
-            found_count += 1
-            # DEBUG: Print details of all found lists
-            print(f"  [DEBUG] Found: {link['date']} | {link['type']} | Court {link['court_no']}")
-            
-            # Construct local filename: YYYY-MM-DD_Type_Court.pdf
-            filename = f"{link['date'].isoformat()}_{link['type']}_C{link['court_no']}.pdf"
-            
-            # Check if already processed (identical source URL and path exists)
-            # Actually, user wants Advance to be updated with Final.
-            # Our ingest_schedule handles duplicate logic and deletion of old Advance lists.
-            
-            existing = cause_list_repo.get_cause_list_record(link['date'], link['type'], link['court_no'])
-            if existing and existing['source_url'] == link['url'] and os.path.exists(existing['file_path']):
-                 # Skip if source URL is identical and file exists
-                 skipped_count += 1
-                 continue
+        # Initialize single Graph Store instance for the sync run
+        graph_store = None
+        try:
+            from lawnidhi.graph.store import LegalGraphStore
+            graph_db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "lawnidhi_graph", "kuzu_db")
+            graph_store = LegalGraphStore(db_path=graph_db_path)
+        except Exception as e:
+            print(f"  [Graph Store Notice]: {e}")
 
-            print(f"Downloading: {link['date']} ({link['type']}) - Court {link['court_no']}")
-            try:
-                local_path = self.download_file(link['url'], filename)
+        try:
+            for link in links:
+                if link['date'] < start_date:
+                    continue
+                    
+                found_count += 1
+                # DEBUG: Print details of all found lists
+                print(f"  [DEBUG] Found: {link['date']} | {link['type']} | Court {link['court_no']}")
                 
-                # Parse and Ingest
-                schedule = self.parser.parse(local_path)
-                # Ensure the parser caught the correct date/type from PDF
-                # If not, override with what we saw on the website
-                schedule.date = link['date']
-                schedule.list_type = link['type']
-                schedule.court_no = link['court_no']
+                # Construct local filename: YYYY-MM-DD_Type_Court.pdf
+                filename = f"{link['date'].isoformat()}_{link['type']}_C{link['court_no']}.pdf"
                 
-                ingest_schedule(schedule)
-                
-                # Update tracking record
-                cause_list_repo.add_cause_list_record(
-                    link['date'], link['type'], link['court_no'], 
-                    local_path, link['url']
-                )
-                processed_count += 1
-                
-            except Exception as e:
-                print(f"Error processing {filename}: {e}")
+                existing = cause_list_repo.get_cause_list_record(link['date'], link['type'], link['court_no'])
+                if existing and existing['source_url'] == link['url'] and os.path.exists(existing['file_path']):
+                    skipped_count += 1
+                    continue
+
+                print(f"Downloading: {link['date']} ({link['type']}) - Court {link['court_no']}")
+                try:
+                    local_path = self.download_file(link['url'], filename)
+                    
+                    # Parse and Ingest
+                    schedule = self.parser.parse(local_path)
+                    schedule.date = link['date']
+                    schedule.list_type = link['type']
+                    schedule.court_no = link['court_no']
+                    
+                    # 1. Ingest to SQLite
+                    ingest_schedule(schedule)
+
+                    # 2. Incrementally Ingest to Knowledge Graph (Kùzu)
+                    if graph_store:
+                        try:
+                            from lawnidhi.graph.cause_list import ingest_schedule_to_graph
+                            ingest_schedule_to_graph(schedule, graph_store)
+                        except Exception as ge:
+                            print(f"  [Graph Sync Notice]: {ge}")
+                    
+                    # Update tracking record
+                    cause_list_repo.add_cause_list_record(
+                        link['date'], link['type'], link['court_no'], 
+                        local_path, link['url']
+                    )
+                    processed_count += 1
+                    
+                except Exception as e:
+                    print(f"Error processing {filename}: {e}")
+        finally:
+            if graph_store:
+                graph_store.close()
                 
         print("-" * 40)
         print(f"Sync complete:")

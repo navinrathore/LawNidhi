@@ -1,7 +1,10 @@
 import sqlite3
 from typing import Optional, List, Dict
 from datetime import date
-from lawnidhi.db.schema import DB_PATH
+from lawnidhi.db.schema import DB_PATH, create_tables
+
+# Ensure tables exist on import
+create_tables()
 
 def add_cause_list_record(
     list_date: date,

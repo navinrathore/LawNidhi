@@ -50,6 +50,13 @@ def main():
   \033[93m[REPORTS]\033[0m
     \033[96mgenerate-invoice\033[0m        - Create appearance logs for billing
 
+  \033[93m[KNOWLEDGE GRAPH]\033[0m
+    \033[96mgraph-stats\033[0m             - View Knowledge Graph node & relationship counts
+    \033[96mgraph-sync\033[0m              - Sync all cause list PDFs into Knowledge Graph
+    \033[96mgraph-timeline\033[0m          - View chronological hearing timeline for a case
+    \033[96mgraph-daily-board\033[0m       - View daily courtroom cause list board
+    \033[96mgraph-counsel-clashes\033[0m   - Detect multi-courtroom appearance clashes
+
   \033[93m[EXPLORATION]\033[0m
     \033[96mlist-db-cases\033[0m           - Search all historical cause-list data
     \033[96mlist-counsels\033[0m           - Browse unique names in the DB
@@ -62,6 +69,23 @@ def main():
 """
     )
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # --- KNOWLEDGE GRAPH ---
+    subparsers.add_parser("graph-stats", help="View Knowledge Graph statistics and entity breakdown")
+    
+    gsync_parser = subparsers.add_parser("graph-sync", help="Ingest all downloaded cause lists into the Knowledge Graph")
+    gsync_parser.add_argument("--dir", default=None, help="Custom directory containing cause list PDFs")
+
+    gtl_parser = subparsers.add_parser("graph-timeline", help="View chronological listing timeline for a case")
+    gtl_parser.add_argument("case", help="Case number (e.g. 606/2018 or 83/2025)")
+
+    gdb_parser = subparsers.add_parser("graph-daily-board", help="View cause list board for a specific date")
+    gdb_parser.add_argument("date", help="Hearing date (YYYY-MM-DD)")
+    gdb_parser.add_argument("--court", default=None, help="Optional court number filter (e.g. 'Court 1')")
+
+    gcc_parser = subparsers.add_parser("graph-counsel-clashes", help="Detect courtroom scheduling clashes for a counsel")
+    gcc_parser.add_argument("date", help="Hearing date (YYYY-MM-DD)")
+    gcc_parser.add_argument("counsel", default=None, nargs="?", help="Counsel name (default: from config)")
 
     # init-db is moved to the SYSTEM group below
 
@@ -413,6 +437,113 @@ def main():
             for s in schedules:
                 print(f"{s['schedule_date']:<14} {s['court_no'] or '-':<8} {s['list_type']:<14} {s['case_count']:<6} {s['judge_name'] or '-'}")
             print(f"\nTotal: {len(schedules)} schedule(s)")
+
+    # === Knowledge Graph Handlers ===
+
+    elif args.command == "graph-stats":
+        import os
+        from lawnidhi.graph.store import LegalGraphStore
+        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        store = LegalGraphStore(db_path=db_path)
+        stats = store.get_graph_stats()
+        print("\n\033[92m🏛️  Knowledge Graph Statistics (Kùzu DB):\033[0m")
+        print("-" * 40)
+        print(f"  Total Graph Nodes:         {stats['total_nodes']:>6}")
+        print(f"  Total Relationships:       {stats['total_relationships']:>6}")
+        print("\n  \033[93mEntity Breakdown:\033[0m")
+        for ent_type, count in sorted(stats['entity_breakdown'].items()):
+            print(f"    • {ent_type:<18} {count:>6} nodes")
+        store.close()
+
+    elif args.command == "graph-sync":
+        import glob
+        import os
+        from lawnidhi.parsers.ngt.cause_list_parser import NGTCauseListParser
+        from lawnidhi.graph.cause_list import ingest_schedule_to_graph
+        from lawnidhi.graph.store import LegalGraphStore
+
+        target_dir = args.dir or os.path.join(os.path.dirname(__file__), "data", "cause_lists")
+        pdf_files = sorted(glob.glob(os.path.join(target_dir, "*.pdf")))
+        if not pdf_files:
+            print(f"No cause list PDFs found in {target_dir}")
+            sys.exit(0)
+
+        print(f"\n\033[92m🔄 Syncing {len(pdf_files)} Cause List PDFs into Knowledge Graph...\033[0m")
+        parser_inst = NGTCauseListParser()
+        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        store = LegalGraphStore(db_path=db_path)
+
+        total_cases = 0
+        total_relations = 0
+        for pdf in pdf_files:
+            try:
+                sched = parser_inst.parse(pdf)
+                res = ingest_schedule_to_graph(sched, store)
+                print(f"  ✓ {os.path.basename(pdf):<32} -> {res['cases_ingested']:>2} cases, {res['relations_created']:>3} relations")
+                total_cases += res['cases_ingested']
+                total_relations += res['relations_created']
+            except Exception as e:
+                print(f"  ✗ Error parsing {os.path.basename(pdf)}: {e}")
+
+        stats = store.get_graph_stats()
+        print(f"\n\033[92m✓ Sync Complete!\033[0m Graph now contains {stats['total_nodes']} nodes and {stats['total_relationships']} relationships.")
+        store.close()
+
+    elif args.command == "graph-timeline":
+        import os
+        from lawnidhi.graph.store import LegalGraphStore
+        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        store = LegalGraphStore(db_path=db_path)
+        history = store.get_case_listing_history(args.case)
+        if not history:
+            print(f"No hearing records found in Knowledge Graph for case '{args.case}'.")
+        else:
+            print(f"\n\033[92m📅 Listing Timeline for Case: {args.case} (Total Hearings: {len(history)})\033[0m")
+            print("-" * 80)
+            print(f"{'Date':<14} {'Court':<10} {'Item':<6} {'Gap':<16} {'Presiding Judge'}")
+            print("-" * 80)
+            for h in history:
+                gap_str = f"+{h['days_since_previous']} days gap" if h['days_since_previous'] is not None else "First listing"
+                item_str = str(h['item_number']) if h['item_number'] is not None else "-"
+                judge_str = (h['judge_name'][:30] + '..') if h['judge_name'] and len(h['judge_name']) > 32 else (h['judge_name'] or '-')
+                print(f"{h['date']:<14} {h['court_no']:<10} {item_str:<6} {gap_str:<16} {judge_str}")
+        store.close()
+
+    elif args.command == "graph-daily-board":
+        import os
+        from lawnidhi.graph.store import LegalGraphStore
+        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        store = LegalGraphStore(db_path=db_path)
+        cases = store.get_cases_listed_on_date(args.date, court_no=args.court)
+        if not cases:
+            print(f"No cases listed on {args.date} in the Knowledge Graph.")
+        else:
+            court_header = f" ({args.court})" if args.court else ""
+            print(f"\n\033[92m📋 Daily Board for {args.date}{court_header} (Total Items: {len(cases)})\033[0m")
+            print("-" * 85)
+            print(f"{'Item':<6} {'Court':<10} {'Case Title / Number':<40} {'Judge'}")
+            print("-" * 85)
+            for c in cases:
+                case_title = (c['case_name'][:38] + '..') if len(c['case_name']) > 40 else c['case_name']
+                judge_title = (c['judge_name'][:25] + '..') if len(c['judge_name']) > 27 else (c['judge_name'] or '-')
+                print(f"{c['item_number']:<6} {c['court_no']:<10} {case_title:<40} {judge_title}")
+        store.close()
+
+    elif args.command == "graph-counsel-clashes":
+        import os
+        from lawnidhi.graph.store import LegalGraphStore
+        counsel_name = args.counsel or config.get_counsel_name()
+        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        store = LegalGraphStore(db_path=db_path)
+        clashes = store.find_counsel_clashes(args.date, counsel_name)
+        if not clashes:
+            print(f"\n\033[92m✓ No courtroom clashes detected for '{counsel_name}' on {args.date}.\033[0m")
+        else:
+            print(f"\n\033[91m⚠️  COURTROOM CLASH DETECTED for '{counsel_name}' on {args.date}!\033[0m")
+            print("-" * 75)
+            for c in clashes:
+                print(f"  • {c['court_no']} | Item {c.get('item_number') or '-'}: {c['case_name']} (Judge: {c['judge_name']})")
+        store.close()
 
     else:
         parser.print_help()

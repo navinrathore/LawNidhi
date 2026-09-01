@@ -84,9 +84,9 @@ class NGTCauseListParser(BaseParser):
                             if case_no:
                                 current_case['case_number'] += " " + case_no.strip()
                             if parties:
-                                current_case['raw_parties'] += " " + parties.strip()
+                                current_case['raw_parties'] += "\n" + parties.strip()
                             if counsel:
-                                current_case['raw_counsel'] += " " + counsel.strip()
+                                current_case['raw_counsel'] += "\n" + counsel.strip()
                                 
             if current_case:
                 self._finalize_case(current_case, cases)
@@ -105,26 +105,57 @@ class NGTCauseListParser(BaseParser):
             cases=cases
         )
 
+    def _clean_counsel_name(self, name: str) -> str:
+        """Strip honorifics, role qualifiers, and extra whitespace from an advocate's name."""
+        name = re.sub(r'^(?:Adv\.|Advocate|Mr\.|Ms\.|Mrs\.|Sh\.|Dr\.|Smt\.|Sr\.\s*Adv\.)\s*', '', name, flags=re.IGNORECASE)
+        name = re.sub(r'\(.*?\)', '', name)
+        name = re.sub(r'\s+', ' ', name).strip(',. -')
+        return name
+
+    def _extract_counsels(self, raw_counsel_text: str) -> List[CounselModel]:
+        """Extract individual clean counsel names from multiline/delimiter-separated counsel text."""
+        if not raw_counsel_text or raw_counsel_text.strip() in ('-', 'N/A', 'None'):
+            return []
+            
+        # Replace common role qualifiers with newlines
+        text = re.sub(
+            r'(?i)\bfor\s+(?:applicant|appellant|petitioner|respondent|res|r-\d+|state|cpcb|moef|dpcc|uoi|union\s+of\s+india|intervenor)[^\n,;:]*[:\s-]*',
+            '\n',
+            raw_counsel_text
+        )
+        
+        # Split on newlines, semicolons, commas, "with", "along with", "&"
+        lines = re.split(r'[\n\r;,]+|\s+with\s+|\s+along\s+with\s+|\s*&\s*', text)
+        counsels = []
+        seen = set()
+        for line in lines:
+            c_name = self._clean_counsel_name(line)
+            if not c_name or len(c_name) < 3:
+                continue
+            if c_name.lower() in ('applicant in person', 'in person', 'appellant in person', 'nil', 'none', 'n/a', 'respondent in person'):
+                continue
+            if re.search(r'[A-Za-z]', c_name) and c_name.lower() not in seen:
+                seen.add(c_name.lower())
+                counsels.append(CounselModel(name=c_name))
+                
+        return counsels
+
     def _finalize_case(self, current_case, cases_list):
         parties_text = current_case['raw_parties']
         applicants = []
         respondents = []
         
-        if ' Vs ' in parties_text or '\nVs\n' in parties_text or '\nVs ' in parties_text or ' Vs' in parties_text:
-            parts = re.split(r'\s+Vs\s+', parties_text.replace('\n', ' '), maxsplit=1)
-            if len(parts) == 1:
-                parts = parties_text.split('Vs')
+        if re.search(r'\s+(?:Vs|VS|Versus|v/s)\s+', parties_text, re.IGNORECASE):
+            parts = re.split(r'\s+(?:Vs|VS|Versus|v/s)\s+', parties_text, maxsplit=1, flags=re.IGNORECASE)
             app = parts[0].strip()
             res = parts[1].strip() if len(parts) > 1 else ""
             applicants.append(PartyModel(name=app, role="Applicant"))
-            respondents.append(PartyModel(name=res, role="Respondent"))
+            if res:
+                respondents.append(PartyModel(name=res, role="Respondent"))
         else:
             applicants.append(PartyModel(name=parties_text.strip(), role="Applicant"))
             
-        counsels = []
-        for c_text in current_case['raw_counsel'].replace('\n', ' ').split(','):
-            if c_text.strip():
-                counsels.append(CounselModel(name=c_text.strip()))
+        counsels = self._extract_counsels(current_case['raw_counsel'])
                 
         cases_list.append(CaseModel(
             case_number=current_case['case_number'].replace('\n', ' ').strip(),
