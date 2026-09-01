@@ -93,34 +93,68 @@ class LegalGraphStore:
         Note: Both source and target nodes must exist in the database.
         """
         try:
-            check_res = self.conn.execute(
-                "MATCH (a:LegalEntity {id: $src})-[r:RelatesTo {relation_type: $rel}]->(b:LegalEntity {id: $tgt}) RETURN r.relation_type",
-                {"src": relation.source_id, "tgt": relation.target_id, "rel": relation.relation_type}
-            )
-            if check_res.has_next():
-                self.conn.execute(
+            case_id = relation.properties.get("case_id") if relation.properties else None
+            if case_id:
+                check_res = self.conn.execute(
                     "MATCH (a:LegalEntity {id: $src})-[r:RelatesTo {relation_type: $rel}]->(b:LegalEntity {id: $tgt}) "
-                    "SET r.weight = $weight, r.properties = $props",
-                    {
-                        "src": relation.source_id,
-                        "tgt": relation.target_id,
-                        "rel": relation.relation_type,
-                        "weight": float(relation.weight),
-                        "props": relation.properties_json(),
-                    }
+                    "WHERE r.properties CONTAINS $case_id RETURN r.relation_type",
+                    {"src": relation.source_id, "tgt": relation.target_id, "rel": relation.relation_type, "case_id": case_id}
                 )
+                if check_res.has_next():
+                    self.conn.execute(
+                        "MATCH (a:LegalEntity {id: $src})-[r:RelatesTo {relation_type: $rel}]->(b:LegalEntity {id: $tgt}) "
+                        "WHERE r.properties CONTAINS $case_id "
+                        "SET r.weight = $weight, r.properties = $props",
+                        {
+                            "src": relation.source_id,
+                            "tgt": relation.target_id,
+                            "rel": relation.relation_type,
+                            "case_id": case_id,
+                            "weight": float(relation.weight),
+                            "props": relation.properties_json(),
+                        }
+                    )
+                else:
+                    self.conn.execute(
+                        "MATCH (a:LegalEntity {id: $src}), (b:LegalEntity {id: $tgt}) "
+                        "CREATE (a)-[r:RelatesTo {relation_type: $rel, weight: $weight, properties: $props}]->(b)",
+                        {
+                            "src": relation.source_id,
+                            "tgt": relation.target_id,
+                            "rel": relation.relation_type,
+                            "weight": float(relation.weight),
+                            "props": relation.properties_json(),
+                        }
+                    )
             else:
-                self.conn.execute(
-                    "MATCH (a:LegalEntity {id: $src}), (b:LegalEntity {id: $tgt}) "
-                    "CREATE (a)-[r:RelatesTo {relation_type: $rel, weight: $weight, properties: $props}]->(b)",
-                    {
-                        "src": relation.source_id,
-                        "tgt": relation.target_id,
-                        "rel": relation.relation_type,
-                        "weight": float(relation.weight),
-                        "props": relation.properties_json(),
-                    }
+                check_res = self.conn.execute(
+                    "MATCH (a:LegalEntity {id: $src})-[r:RelatesTo {relation_type: $rel}]->(b:LegalEntity {id: $tgt}) RETURN r.relation_type",
+                    {"src": relation.source_id, "tgt": relation.target_id, "rel": relation.relation_type}
                 )
+                if check_res.has_next():
+                    self.conn.execute(
+                        "MATCH (a:LegalEntity {id: $src})-[r:RelatesTo {relation_type: $rel}]->(b:LegalEntity {id: $tgt}) "
+                        "SET r.weight = $weight, r.properties = $props",
+                        {
+                            "src": relation.source_id,
+                            "tgt": relation.target_id,
+                            "rel": relation.relation_type,
+                            "weight": float(relation.weight),
+                            "props": relation.properties_json(),
+                        }
+                    )
+                else:
+                    self.conn.execute(
+                        "MATCH (a:LegalEntity {id: $src}), (b:LegalEntity {id: $tgt}) "
+                        "CREATE (a)-[r:RelatesTo {relation_type: $rel, weight: $weight, properties: $props}]->(b)",
+                        {
+                            "src": relation.source_id,
+                            "tgt": relation.target_id,
+                            "rel": relation.relation_type,
+                            "weight": float(relation.weight),
+                            "props": relation.properties_json(),
+                        }
+                    )
         except Exception as e:
             logger.debug(f"Relation upsert: {e}")
 
@@ -527,41 +561,91 @@ class LegalGraphStore:
             return []
 
         appearances = []
+        seen_entries = set()
+
         for cid, cname in matched_counsels:
-            query = """
-                MATCH (counsel:LegalEntity {id: $counsel_id})-[r:RelatesTo {relation_type: 'APPEARED_IN'}]->(h:LegalEntity {entity_type: 'HEARING'})
-                OPTIONAL MATCH (h)-[:RelatesTo {relation_type: 'PRESIDED_BY'}]->(j:LegalEntity)
-                RETURN h.id, h.name, h.properties, r.properties, j.name
-            """
-            response = self.conn.execute(query, {"counsel_id": cid})
+            if start_date or end_date:
+                # 1. Date-specific board: Query direct assigned appearances on that specific hearing
+                query = """
+                    MATCH (counsel:LegalEntity {id: $counsel_id})-[r:RelatesTo {relation_type: 'APPEARED_IN'}]->(h:LegalEntity {entity_type: 'HEARING'})
+                    OPTIONAL MATCH (h)-[:RelatesTo {relation_type: 'PRESIDED_BY'}]->(j:LegalEntity)
+                    RETURN h.id, h.name, h.properties, r.properties, j.name
+                """
+                response = self.conn.execute(query, {"counsel_id": cid})
 
-            while response.has_next():
-                row = response.get_next()
-                h_props = json.loads(row[2]) if row[2] else {}
-                r_props = json.loads(row[3]) if row[3] else {}
+                while response.has_next():
+                    row = response.get_next()
+                    h_props = json.loads(row[2]) if row[2] else {}
+                    r_props = json.loads(row[3]) if row[3] else {}
 
-                h_date = h_props.get("date", "")
-                if start_date and h_date < start_date[:10]:
-                    continue
-                if end_date and h_date > end_date[:10]:
-                    continue
+                    h_date = h_props.get("date", "")
+                    if start_date and h_date < start_date[:10]:
+                        continue
+                    if end_date and h_date > end_date[:10]:
+                        continue
 
-                case_id = r_props.get("case_id", "")
-                case_entity = self.get_entity(case_id) if case_id else None
-                case_name = case_entity["name"] if case_entity else "Case"
+                    case_id = r_props.get("case_id", "")
+                    case_entity = self.get_entity(case_id) if case_id else None
+                    case_name = case_entity["name"] if case_entity else (case_id or "Case")
+                    court_no = h_props.get("court_no", "")
+                    item_no = r_props.get("item_number", None)
+                    list_type = h_props.get("list_type", "Final")
 
-                appearances.append({
-                    "counsel_id": cid,
-                    "counsel_name": cname,
-                    "hearing_id": row[0],
-                    "date": h_date,
-                    "court_no": h_props.get("court_no", ""),
-                    "list_type": h_props.get("list_type", "Final"),
-                    "case_id": case_id,
-                    "case_name": case_name,
-                    "item_number": r_props.get("item_number", None),
-                    "judge_name": row[4] or h_props.get("judge_name", ""),
-                })
+                    entry_key = (h_date, court_no, item_no, case_id, list_type)
+                    if entry_key in seen_entries:
+                        continue
+                    seen_entries.add(entry_key)
+
+                    appearances.append({
+                        "counsel_id": cid,
+                        "counsel_name": cname,
+                        "hearing_id": row[0],
+                        "date": h_date,
+                        "court_no": court_no,
+                        "list_type": list_type,
+                        "case_id": case_id,
+                        "case_name": case_name,
+                        "item_number": item_no,
+                        "judge_name": row[4] or h_props.get("judge_name", ""),
+                    })
+            else:
+                # 2. Historical/lifetime query: Traverse all lifetime case representations
+                query = """
+                    MATCH (counsel:LegalEntity {id: $counsel_id})-[r:RelatesTo {relation_type: 'REPRESENTS'}]->(c_node:LegalEntity {entity_type: 'CASE'})-[l:RelatesTo {relation_type: 'LISTED_AT'}]->(h:LegalEntity {entity_type: 'HEARING'})
+                    OPTIONAL MATCH (h)-[:RelatesTo {relation_type: 'PRESIDED_BY'}]->(j:LegalEntity)
+                    RETURN h.id, h.name, h.properties, c_node.id, c_node.name, l.properties, j.name
+                """
+                response = self.conn.execute(query, {"counsel_id": cid})
+
+                while response.has_next():
+                    row = response.get_next()
+                    h_props = json.loads(row[2]) if row[2] else {}
+                    l_props = json.loads(row[5]) if row[5] else {}
+
+                    h_date = h_props.get("date", "")
+                    case_id = row[3]
+                    case_name = row[4]
+                    court_no = h_props.get("court_no", "")
+                    item_no = l_props.get("item_number", None)
+                    list_type = l_props.get("list_type", h_props.get("list_type", "Final"))
+
+                    entry_key = (h_date, court_no, item_no, case_id, list_type)
+                    if entry_key in seen_entries:
+                        continue
+                    seen_entries.add(entry_key)
+
+                    appearances.append({
+                        "counsel_id": cid,
+                        "counsel_name": cname,
+                        "hearing_id": row[0],
+                        "date": h_date,
+                        "court_no": court_no,
+                        "list_type": list_type,
+                        "case_id": case_id,
+                        "case_name": case_name,
+                        "item_number": item_no,
+                        "judge_name": row[6] or h_props.get("judge_name", ""),
+                    })
 
         appearances.sort(key=lambda x: (x["date"], x["court_no"], x.get("item_number") or 999))
         return appearances
