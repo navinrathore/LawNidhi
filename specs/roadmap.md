@@ -9,6 +9,8 @@
 - [x] **Phase 4: FastAPI Graph Bridge & REST Service Layer** — (Completed)
 - [x] **Phase 5: Hybrid GraphRAG Retriever (Vector + Kùzu Graph Expansion)** — (Completed)
 - [x] **Phase 6: Hierarchical Graph Summarization & Interactive Web UI** — (Completed)
+- [x] **Phase 7: Agentic Legal Co-Counsel (Autonomous ReAct Researcher)** — (Completed)
 
-## Future Phases
-- **Phase 7: Agentic Legal Co-Counsel**: Supervisory ReAct agent for deep statutory reasoning, automated case briefing, and drafting.
+## Future Roadmap
+- **Automated Scheduled Ingestion Daemon**: Automated morning scraper cron for cause lists & order PDFs.
+- **Multi-Zone Court Expansion**: Pune, Chennai, Kolkata, Bhopal, and Supreme Court adapters.

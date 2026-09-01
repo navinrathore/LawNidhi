@@ -10,6 +10,7 @@ from lawnidhi.graph.store import LegalGraphStore
 from lawnidhi.server.routes.graph import router as graph_router
 from lawnidhi.server.routes.orders import router as orders_router
 from lawnidhi.server.routes.rag import router as rag_router
+from lawnidhi.server.routes.agent import router as agent_router
 
 
 def get_default_db_path() -> str:
@@ -58,6 +59,7 @@ def create_app(db_path: str = None) -> FastAPI:
     app.include_router(graph_router)
     app.include_router(orders_router)
     app.include_router(rag_router)
+    app.include_router(agent_router)
 
     # Mount Static Web UI
     static_dir = os.path.join(os.path.dirname(__file__), "static")

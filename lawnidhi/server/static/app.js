@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initGraphExplorer();
     initDailyBoard();
     initGraphRAG();
+    initCoCounsel();
     initClusters();
     initMetrics();
 });
@@ -357,7 +358,57 @@ function initGraphRAG() {
     queryInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') executeRAG(); });
 }
 
-// 5. Thematic Community Clusters
+// 5. Autonomous Legal Co-Counsel (ReAct Agent)
+function initCoCounsel() {
+    const input = document.getElementById('agent-query-input');
+    const runBtn = document.getElementById('btn-run-agent');
+    const outputContent = document.getElementById('agent-output-content');
+    const trajectoryList = document.getElementById('agent-trajectory-list');
+
+    if (!runBtn || !input) return;
+
+    async function runAgent() {
+        const query = input.value.trim();
+        if (!query) return;
+
+        outputContent.innerHTML = '<p class="empty-state">Co-Counsel is planning and executing tools across Knowledge Graph...</p>';
+        trajectoryList.innerHTML = '<p class="empty-state" style="font-size:12px;">Executing ReAct loop...</p>';
+
+        try {
+            const res = await fetch('/api/agent/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: query, max_loops: 10 })
+            });
+            const data = await res.json();
+
+            // Render Trajectory
+            if (data.steps && data.steps.length > 0) {
+                trajectoryList.innerHTML = data.steps.map(s => `
+                    <div class="passage-card" style="border-left: 3px solid var(--accent-indigo);">
+                        <h5 style="color:var(--accent-amber);">[Loop ${s.loop_index}] Thought</h5>
+                        <p style="color:var(--text-secondary);font-size:11px;margin-bottom:6px;">${s.thought}</p>
+                        ${s.action_tool ? `<div style="font-size:11px;color:var(--accent-cyan);margin-bottom:4px;"><strong>Action:</strong> <code>${s.action_tool}</code></div>` : ''}
+                        ${s.observation ? `<div style="font-size:11px;color:#34d399;"><strong>Observation:</strong> ${s.observation}</div>` : ''}
+                    </div>
+                `).join('');
+            } else {
+                trajectoryList.innerHTML = '<p style="font-size:12px;color:var(--text-muted);">No intermediate steps recorded.</p>';
+            }
+
+            // Render Output
+            outputContent.innerHTML = `<pre style="white-space:pre-wrap;font-family:var(--font-body);font-size:13px;line-height:1.6;">${data.final_answer}</pre>`;
+
+        } catch (err) {
+            outputContent.innerHTML = `<p style="color:var(--accent-rose);">Error running Co-Counsel: ${err.message}</p>`;
+        }
+    }
+
+    runBtn.addEventListener('click', runAgent);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') runAgent(); });
+}
+
+// 6. Thematic Community Clusters
 async function initClusters() {
     const container = document.getElementById('clusters-grid');
     const refreshBtn = document.getElementById('btn-refresh-clusters');

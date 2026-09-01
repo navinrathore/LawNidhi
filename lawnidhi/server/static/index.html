@@ -32,6 +32,9 @@
                 <button class="nav-btn" data-tab="tab-rag">
                     <span class="icon">⚡</span> Hybrid GraphRAG
                 </button>
+                <button class="nav-btn" data-tab="tab-agent">
+                    <span class="icon">🤖</span> Legal Co-Counsel
+                </button>
                 <button class="nav-btn" data-tab="tab-clusters">
                     <span class="icon">🔮</span> Thematic Clusters
                 </button>
@@ -193,6 +196,39 @@
                         <div class="citation-block">
                             <h4>Source Passages</h4>
                             <div id="rag-passages-list" class="passages-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB: Autonomous Legal Co-Counsel (Agentic AI) -->
+            <section id="tab-agent" class="tab-pane">
+                <header class="pane-header">
+                    <div class="header-titles">
+                        <h1>Autonomous Legal Co-Counsel (ReAct Agent)</h1>
+                        <p>Autonomous multi-step legal researcher: plans, executes graph tools, verifies precedents, and drafts case briefs.</p>
+                    </div>
+                </header>
+
+                <div class="rag-search-card">
+                    <div class="rag-input-wrapper">
+                        <input type="text" id="agent-query-input" placeholder="Give an instruction (e.g. 'Prepare a case brief for OA 985/2019' or 'Analyze court appearances for Bhanwar Pal Singh')..." value="Prepare a case brief for OA 985/2019">
+                        <button id="btn-run-agent" class="btn-primary">Ask Co-Counsel</button>
+                    </div>
+                </div>
+
+                <div class="rag-results-grid">
+                    <div class="rag-panel synthesis-panel">
+                        <h3>⚖️ Synthesized Case Brief / Opinion</h3>
+                        <div id="agent-output-content" class="markdown-body">
+                            <p class="empty-state">Enter an instruction above to activate the ReAct Co-Counsel loop.</p>
+                        </div>
+                    </div>
+
+                    <div class="rag-panel citations-panel">
+                        <h3>🤖 ReAct Reasoning Trajectory</h3>
+                        <div id="agent-trajectory-list" class="passages-container">
+                            <p class="empty-state" style="font-size:12px;">Step-by-step thoughts and tool observations will appear here.</p>
                         </div>
                     </div>
                 </div>
