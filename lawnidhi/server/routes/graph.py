@@ -190,3 +190,13 @@ def export_graph(
         return {"format": format_type, "data": output}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/communities", summary="Detect and retrieve macro-thematic graph communities")
+def get_communities(
+    min_size: int = Query(2, description="Minimum nodes per community cluster"),
+    store: LegalGraphStore = Depends(get_graph_store)
+) -> Any:
+    from lawnidhi.graph.clustering import GraphClusterEngine
+    engine = GraphClusterEngine(store)
+    return engine.detect_communities(min_size=min_size).model_dump()

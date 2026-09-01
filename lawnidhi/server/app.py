@@ -59,8 +59,23 @@ def create_app(db_path: str = None) -> FastAPI:
     app.include_router(orders_router)
     app.include_router(rag_router)
 
+    # Mount Static Web UI
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
+    if os.path.isdir(static_dir):
+        from fastapi.staticfiles import StaticFiles
+        from fastapi.responses import FileResponse, RedirectResponse
+        app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+        @app.get("/ui", summary="Web UI Dashboard", tags=["System"])
+        def ui() -> FileResponse:
+            return FileResponse(os.path.join(static_dir, "index.html"))
+
     @app.get("/", summary="API Root", tags=["System"])
-    def root() -> Dict[str, str]:
+    def root():
+        static_dir = os.path.join(os.path.dirname(__file__), "static")
+        if os.path.isdir(static_dir):
+            from fastapi.responses import FileResponse
+            return FileResponse(os.path.join(static_dir, "index.html"))
         return {
             "name": "LawNidhi Knowledge Graph API",
             "version": "1.0.0",

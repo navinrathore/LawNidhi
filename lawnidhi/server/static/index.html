@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LawNidhi — Judicial Knowledge Graph & Intelligence Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+    <link rel="stylesheet" href="/static/index.css">
+</head>
+<body class="dark-theme">
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">⚖️</div>
+                <div class="brand-text">
+                    <h2>LawNidhi</h2>
+                    <span>Judicial Graph Intelligence</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-btn active" data-tab="tab-graph">
+                    <span class="icon">🕸️</span> Graph Explorer
+                </button>
+                <button class="nav-btn" data-tab="tab-daily">
+                    <span class="icon">📋</span> Daily Court Board
+                </button>
+                <button class="nav-btn" data-tab="tab-rag">
+                    <span class="icon">⚡</span> Hybrid GraphRAG
+                </button>
+                <button class="nav-btn" data-tab="tab-clusters">
+                    <span class="icon">🔮</span> Thematic Clusters
+                </button>
+                <button class="nav-btn" data-tab="tab-metrics">
+                    <span class="icon">📊</span> Ontology Metrics
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="engine-badge">
+                    <span class="dot live"></span>
+                    <span>Kùzu Graph Engine Active</span>
+                </div>
+                <div class="api-links">
+                    <a href="/docs" target="_blank">Swagger API</a> • 
+                    <a href="/redoc" target="_blank">ReDoc</a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- TAB 1: Visual Graph Explorer -->
+            <section id="tab-graph" class="tab-pane active">
+                <header class="pane-header">
+                    <div class="header-titles">
+                        <h1>Interactive Knowledge Graph Canvas</h1>
+                        <p>Explore cases, advocates, presiding judges, statutory provisions, and citation networks.</p>
+                    </div>
+                    <div class="graph-toolbar">
+                        <div class="search-box">
+                            <input type="text" id="graph-search-input" placeholder="Search advocate, judge, case (e.g. Bhanwar Pal Singh)...">
+                            <button id="btn-graph-search" class="btn-primary">Find Node</button>
+                        </div>
+                        <div class="filter-group">
+                            <label>Layout:</label>
+                            <select id="select-layout">
+                                <option value="cose">COSE (Force-Directed)</option>
+                                <option value="concentric">Concentric</option>
+                                <option value="circle">Circle</option>
+                            </select>
+                        </div>
+                        <button id="btn-reset-zoom" class="btn-secondary">Reset View</button>
+                    </div>
+                </header>
+
+                <div class="graph-container">
+                    <div id="cy"></div>
+
+                    <!-- Graph Node Inspector Drawer -->
+                    <div id="inspector-drawer" class="inspector-drawer hidden">
+                        <div class="drawer-header">
+                            <h3 id="inspector-title">Node Details</h3>
+                            <button id="btn-close-drawer" class="btn-icon">✕</button>
+                        </div>
+                        <div class="drawer-body">
+                            <div class="badge-row">
+                                <span id="inspector-type-badge" class="badge">TYPE</span>
+                            </div>
+                            <div id="inspector-properties" class="properties-list"></div>
+                            <div class="relations-section">
+                                <h4>Connected Neighbors</h4>
+                                <ul id="inspector-neighbors" class="neighbors-list"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Legend Overlay -->
+                    <div class="legend-overlay">
+                        <div class="legend-item"><span class="legend-color case"></span> Case</div>
+                        <div class="legend-item"><span class="legend-color counsel"></span> Counsel</div>
+                        <div class="legend-item"><span class="legend-color judge"></span> Judge</div>
+                        <div class="legend-item"><span class="legend-color section"></span> Section</div>
+                        <div class="legend-item"><span class="legend-color party"></span> Party</div>
+                        <div class="legend-item"><span class="legend-color hearing"></span> Hearing</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: Daily Courtroom Board -->
+            <section id="tab-daily" class="tab-pane">
+                <header class="pane-header">
+                    <div class="header-titles">
+                        <h1>Daily Courtroom Cause List Board</h1>
+                        <p>Real-time courtroom listings with item numbers, complete advocates, and presiding bench.</p>
+                    </div>
+                    <div class="board-filters">
+                        <input type="text" id="daily-date-input" value="today" placeholder="YYYY-MM-DD or today">
+                        <select id="daily-court-select">
+                            <option value="">All Courts</option>
+                            <option value="1">Court 1</option>
+                            <option value="2">Court 2</option>
+                        </select>
+                        <button id="btn-load-daily" class="btn-primary">Load Board</button>
+                    </div>
+                </header>
+
+                <div class="board-summary-bar">
+                    <span id="board-total-count">Total Matters: 0</span>
+                    <span id="board-date-display">Date: Loading...</span>
+                </div>
+
+                <div class="board-table-container">
+                    <table class="data-table" id="table-daily-board">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">Item</th>
+                                <th style="width: 100px;">Court</th>
+                                <th>Case Number & Title</th>
+                                <th>Advocates / Counsels</th>
+                                <th>Presiding Bench</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-daily-board">
+                            <tr><td colspan="5" class="empty-state">Loading courtroom matters...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 3: Hybrid GraphRAG Search Portal -->
+            <section id="tab-rag" class="tab-pane">
+                <header class="pane-header">
+                    <div class="header-titles">
+                        <h1>Hybrid GraphRAG Legal Search</h1>
+                        <p>Multi-hop knowledge graph traversal combined with semantic passage retrieval from order PDFs.</p>
+                    </div>
+                </header>
+
+                <div class="rag-search-card">
+                    <div class="rag-input-wrapper">
+                        <input type="text" id="rag-query-input" placeholder="Ask a legal research question (e.g. Water Act Section 25 industrial effluent penalties)..." value="Water Act Section 25 industrial effluent penalties">
+                        <button id="btn-run-rag" class="btn-primary">Execute GraphRAG</button>
+                    </div>
+                </div>
+
+                <div class="rag-results-grid">
+                    <div class="rag-panel synthesis-panel">
+                        <h3>⚖️ Grounded Legal Synthesis</h3>
+                        <div id="rag-synthesis-content" class="markdown-body">
+                            <p class="empty-state">Enter a query above to execute hybrid graph retrieval.</p>
+                        </div>
+                    </div>
+
+                    <div class="rag-panel citations-panel">
+                        <h3>📜 Knowledge Graph Citations</h3>
+                        <div class="citation-block">
+                            <h4>Statutory Provisions</h4>
+                            <ul id="rag-statutes-list" class="tag-list"><li>None</li></ul>
+                        </div>
+                        <div class="citation-block">
+                            <h4>Binding Precedents</h4>
+                            <ul id="rag-precedents-list" class="tag-list"><li>None</li></ul>
+                        </div>
+                        <div class="citation-block">
+                            <h4>Bench Coram</h4>
+                            <ul id="rag-judges-list" class="tag-list"><li>None</li></ul>
+                        </div>
+                        <div class="citation-block">
+                            <h4>Source Passages</h4>
+                            <div id="rag-passages-list" class="passages-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: Thematic Community Clusters -->
+            <section id="tab-clusters" class="tab-pane">
+                <header class="pane-header">
+                    <div class="header-titles">
+                        <h1>Thematic Legal Communities (Modularity Partitioning)</h1>
+                        <p>Macro-level legal clusters discovered through unsupervised graph modularity algorithms.</p>
+                    </div>
+                    <button id="btn-refresh-clusters" class="btn-secondary">Recompute Clusters</button>
+                </header>
+
+                <div id="clusters-grid" class="clusters-grid">
+                    <p class="empty-state">Detecting graph communities...</p>
+                </div>
+            </section>
+
+            <!-- TAB 5: Ontology Metrics -->
+            <section id="tab-metrics" class="tab-pane">
+                <header class="pane-header">
+                    <div class="header-titles">
+                        <h1>Knowledge Graph Statistics & Ontology Metrics</h1>
+                        <p>Real-time node and relationship counts across Kùzu Property Graph.</p>
+                    </div>
+                </header>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <span class="metric-label">Total Graph Nodes</span>
+                        <h2 id="metric-total-nodes" class="metric-value">918</h2>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Total Relationships</span>
+                        <h2 id="metric-total-relations" class="metric-value">2,659</h2>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Advocates / Counsels</span>
+                        <h2 id="metric-counsels" class="metric-value">391</h2>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Cases & Precedents</span>
+                        <h2 id="metric-cases" class="metric-value">229</h2>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Litigant Parties</span>
+                        <h2 id="metric-parties" class="metric-value">267</h2>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Judicial Coram Members</span>
+                        <h2 id="metric-judges" class="metric-value">16</h2>
+                    </div>
+                </div>
+
+                <div class="schema-overview-card">
+                    <h3>🏛️ Active Legal Entity & Relationship Ontology</h3>
+                    <div class="ontology-tags">
+                        <span class="badge case">CASE</span>
+                        <span class="badge counsel">COUNSEL</span>
+                        <span class="badge judge">JUDGE</span>
+                        <span class="badge section">SECTION</span>
+                        <span class="badge party">PARTY</span>
+                        <span class="badge hearing">HEARING</span>
+                    </div>
+                    <div class="ontology-edges">
+                        <span class="edge-tag">LISTED_AT</span>
+                        <span class="edge-tag">PRESIDED_BY</span>
+                        <span class="edge-tag">REPRESENTS</span>
+                        <span class="edge-tag">APPEARED_IN</span>
+                        <span class="edge-tag">PARTY_TO</span>
+                        <span class="edge-tag">CITES_PRECEDENT</span>
+                        <span class="edge-tag">INVOKES_STATUTE</span>
+                        <span class="edge-tag">DELIVERED_BY</span>
+                        <span class="edge-tag">FOLLOWS_HEARING</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

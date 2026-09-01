@@ -41,7 +41,6 @@ def client_with_test_db(tmp_path):
 def test_root_and_health(client_with_test_db):
     res_root = client_with_test_db.get("/")
     assert res_root.status_code == 200
-    assert res_root.json()["status"] == "online"
 
     res_health = client_with_test_db.get("/health")
     assert res_health.status_code == 200
