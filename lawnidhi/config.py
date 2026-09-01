@@ -74,6 +74,11 @@ def get_default_download_dir() -> str:
     """Get the default download directory."""
     return get("defaults", "download_dir", fallback="data/orders") or "data/orders"
 
+def get_auto_create_cases() -> bool:
+    """Check if cases should be auto-created when downloading orders."""
+    val = get("defaults", "auto_create_cases", fallback="true")
+    return str(val).strip().lower() in ("true", "1", "yes", "on")
+
 def config_path() -> str:
     """Return the config file path."""
     return _CONFIG_PATH

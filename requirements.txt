@@ -3,3 +3,6 @@ pdfplumber>=0.11.0
 requests>=2.31.0
 beautifulsoup4>=4.12.2
 pytest>=7.4.0
+kuzu>=0.11.0
+networkx>=3.0.0
+

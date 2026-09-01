@@ -1,3 +1,4 @@
+README.md
 pyproject.toml
 lawnidhi/config.py
 lawnidhi.egg-info/PKG-INFO

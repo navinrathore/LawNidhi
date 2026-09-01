@@ -29,6 +29,7 @@ This is the persistent record of all features, optimizations, and roadmap items 
 ## 🔴 [ROADMAP] Future Scaling
 - [ ] **PENDING** `[CORE]` **Multi-Vector Retrieval** `***`: Support for Tables and Images extraction from legal documents via MinerU.
 - [ ] **PENDING** `[CORE]` **External Vector DB** `***`: Abstraction layer to support ChromaDB or Qdrant for enterprise-scale litigation.
+- [ ] **PENDING** `[CORE]` **Legal Knowledge Graph & Citation Network** `***`: Ingest parsed NGT orders and cause lists into an embedded graph DB (Kùzu/NetworkX). Model `(Case)-[:CITES_PRECEDENT]->(Case)`, `(Counsel)-[:REPRESENTS]->(Party)`, and `(Case)-[:INVOKES_STATUTE]->(Section)` for multi-hop legal analytics and precedent discovery.
 
 ## 🟣 [PROMPTS] Prompt Review & Refinement
 - [ ] **PENDING** `[PROMPT]` **Review Litigation Gaps** `***`: Audit `prompts_repo.py` to identify missing specialized legal/case prompts.

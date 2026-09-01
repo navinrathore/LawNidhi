@@ -42,13 +42,16 @@ def get_cause_list_record(list_date: date, list_type: str, court_no: str) -> Opt
     finally:
         conn.close()
 
-def list_downloaded_cause_lists(limit: int = 50) -> List[Dict]:
-    """List recent cause list downloads."""
+def list_downloaded_cause_lists(limit: Optional[int] = 10) -> List[Dict]:
+    """List recent cause list downloads. If limit is None, returns all records."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     try:
-        cursor.execute('SELECT * FROM cause_lists ORDER BY date DESC, downloaded_at DESC LIMIT ?', (limit,))
+        if limit is None:
+            cursor.execute('SELECT * FROM cause_lists ORDER BY date DESC, downloaded_at DESC')
+        else:
+            cursor.execute('SELECT * FROM cause_lists ORDER BY date DESC, downloaded_at DESC LIMIT ?', (limit,))
         return [dict(row) for row in cursor.fetchall()]
     finally:
         conn.close()
