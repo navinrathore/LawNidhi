@@ -32,3 +32,17 @@ Before moving to the next phase, the AI must ensure:
 - Follow PEP-8.
 - Use type hints for all function signatures.
 - Log appropriately.
+
+## Pragmatic (Lightweight) TDD Strategy
+LawNidhi embraces a **selective, high-ROI TDD approach** rather than dogmatic test-everything-first:
+
+- **Apply TDD (Test-First)** to:
+  - **Domain Models & Invariants (DDD)**: Value objects (`CaseNumber`, `Citation`), state transition rules, and aggregate invariants. These are pure Python with zero I/O and execute in milliseconds.
+  - **Text Parsers & Extraction Regex**: PDF order triplet extractors, cause list regex patterns, and counsel string parsers. Use static sample fixtures to write failing tests for new edge cases before tweaking parsing heuristics.
+  - **Deterministic GraphRAG & Cypher Queries**: Test multi-hop expansions (`GraphContextExpander`) and assembly logic against an in-memory/fixture graph store.
+
+- **SKIP TDD** for:
+  - **Live External Scraping & CAPTCHA**: Do not unit test against live court network endpoints. Use recorded HTML/PDF fixtures for unit tests, and relegate live network checks to manual or scheduled smoke tests.
+  - **Generative LLM Text Synthesis**: Do not write rigid string-matching assertions on model text. Test strict Pydantic output schemas instead, and evaluate generation quality using benchmarks/LLM-as-a-judge.
+  - **UI Styling & HTML Layouts**: Verify visually in the browser rather than writing fragile layout tests.
+

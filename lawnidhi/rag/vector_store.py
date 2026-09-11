@@ -102,11 +102,18 @@ class LegalDocumentStore:
             ngram_range=(1, 2),
             max_features=10000
         )
-        self.tfidf_matrix = self.vectorizer.fit_transform(corpus)
-        self._is_indexed = True
+        try:
+            self.tfidf_matrix = self.vectorizer.fit_transform(corpus)
+            self._is_indexed = True
+        except ValueError:
+            # Fallback for empty vocabulary (e.g. only stopwords)
+            self.vectorizer = None
+            self.tfidf_matrix = None
+            self._is_indexed = False
 
     def search(self, query: str, top_k: int = 5) -> List[TextChunk]:
         """Search top-K relevant text chunks given a query string."""
+        top_k = max(1, top_k)
         if not self.chunks:
             return []
 

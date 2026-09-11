@@ -48,9 +48,11 @@ class GraphClusterEngine:
 
         try:
             raw_communities = list(community.greedy_modularity_communities(G_undirected))
+            mod_score = community.quality.modularity(G_undirected, raw_communities)
         except Exception:
             # Fallback to connected components
             raw_communities = list(nx.connected_components(G_undirected))
+            mod_score = 0.0
 
         # Filter by minimum community size
         valid_communities = [c for c in raw_communities if len(c) >= min_size]
@@ -123,6 +125,6 @@ class GraphClusterEngine:
         return ClusteringSummary(
             total_nodes=len(G),
             total_communities=len(profiles),
-            modularity_score=round(0.68, 4),  # High modularity partition
+            modularity_score=round(mod_score, 4),
             communities=profiles
         )

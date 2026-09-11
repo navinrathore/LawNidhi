@@ -30,7 +30,7 @@ class HybridGraphRAGRetriever:
 
         # Also check if query directly mentions case numbers (e.g. "985/2019" or "83/2025")
         import re
-        case_nums = re.findall(r"\b\d+\/\d{4}\b", query)
+        case_nums = re.findall(r"\b\d+\s*\/\s*\d{4}\b", query)
         for num in case_nums:
             candidate_cases.add(num)
 
