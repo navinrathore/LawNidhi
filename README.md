@@ -48,36 +48,44 @@ Ensure dependencies are installed:
 pip install -r requirements.txt
 ```
 
-### Primary Commands
+### Execution Interfaces
 
-NyayaGraph is operated via `cli.py`:
+NyayaGraph provides 3 ergonomic ways to run commands:
+1. **Shortform runner**: `./ng <command>` *(fastest)*
+2. **Makefile shortcuts**: `make <target>` *(e.g., `make stats`, `make board`, `make rag q="..."`)*
+3. **Full CLI**: `python cli.py <command>`
+
+---
+
+### Primary Commands Reference
 
 #### 1. Knowledge Graph & Analytics
-- **`python cli.py graph-stats`**: View total nodes, relationships, and entity breakdown across the graph.
-- **`python cli.py graph-sync`**: Ingest all downloaded cause lists into the Knowledge Graph.
-- **`python cli.py graph-sync-orders`**: Batch extract and ingest all order PDFs into the Knowledge Graph.
-- **`python cli.py graph-timeline 83/2025`**: View chronological hearing timeline for a specific case.
-- **`python cli.py graph-daily-board`**: View courtroom cause list board for today/tomorrow.
-- **`python cli.py graph-counsel-clashes "Hemlata Singh"`**: Detect multi-courtroom appearance clashes across benches.
-- **`python cli.py graph-communities`**: Detect and display macro-thematic legal graph clusters.
+- **`./ng graph-stats`** or **`make stats`**: View total nodes, relationships, and entity breakdown across the graph.
+- **`./ng graph-sync`** or **`make sync`**: Ingest all downloaded cause lists into the Knowledge Graph.
+- **`./ng graph-sync-orders`** or **`make sync-orders`**: Batch extract and ingest all order PDFs into the Knowledge Graph.
+- **`./ng graph-timeline 83/2025`** or **`make timeline case=83/2025`**: View chronological hearing timeline for a specific case.
+- **`./ng graph-daily-board`** or **`make board`**: View courtroom cause list board for today/tomorrow.
+- **`./ng graph-counsel-clashes "Hemlata Singh"`** or **`make clashes counsel="Hemlata Singh"`**: Detect multi-courtroom appearance clashes across benches.
+- **`./ng graph-communities`** or **`make communities`**: Detect and display macro-thematic legal graph clusters.
 
 #### 2. Hybrid GraphRAG & Agentic Co-Counsel
-- **`python cli.py graph-rag "water pollution tanneries Kanpur"`**: Execute Hybrid GraphRAG retrieval (sparse vector search + multi-hop graph expansion).
-- **`python cli.py ask "Prepare a case brief for OA 985/2019"`**: Launch the autonomous ReAct Co-Counsel loop.
+- **`./ng graph-rag "water pollution tanneries Kanpur"`** or **`make rag q="water pollution"`**: Execute Hybrid GraphRAG retrieval (sparse vector search + multi-hop graph expansion).
+- **`./ng ask "Prepare a case brief for OA 985/2019"`** or **`make ask q="Prepare brief for OA 985/2019"`**: Launch the autonomous ReAct Co-Counsel loop.
 
 #### 3. FastAPI REST Service Layer
-- **`python cli.py serve --host 127.0.0.1 --port 8000`**: Start the Uvicorn REST server. Exposes the Knowledge Graph, RAG endpoints, and Swagger UI at `http://localhost:8000/docs`.
+- **`./ng serve`** or **`make serve`**: Start the Uvicorn REST server. Exposes the Knowledge Graph, RAG endpoints, and Swagger UI at `http://localhost:8000/docs`.
 
 #### 4. Scraping & Docketing Pipeline
-- **`python cli.py sync-cause-lists`**: Scan court portal and update local database with new hearing schedules.
-- **`python cli.py search-case 83/2025`**: Search for a case by number and year to resolve Diary Number.
-- **`python cli.py download-case-orders 83/2025`**: Full pipeline: search case -> solve CAPTCHA -> download order PDFs.
+- **`./ng sync-cause-lists`**: Scan court portal and update local database with new hearing schedules.
+- **`./ng search-case 83/2025`**: Search for a case by number and year to resolve Diary Number.
+- **`./ng download-case-orders 83/2025`**: Full pipeline: search case -> solve CAPTCHA -> download order PDFs.
 
 #### 5. Portfolio Management & Billing
-- **`python cli.py add-case 83/2025 --title "Example Case"`**: Add a case to your managed portfolio.
-- **`python cli.py list-cases`**: Browse tracked cases in your portfolio.
-- **`python cli.py generate-invoice`**: Create an appearance log report for billing.
-- **`python cli.py db-stats`**: View row counts and health of the local relational database.
+- **`./ng add-case 83/2025 --title "Example Case"`**: Add a case to your managed portfolio.
+- **`./ng list-cases`**: Browse tracked cases in your portfolio.
+- **`./ng generate-invoice`**: Create an appearance log report for billing.
+- **`./ng db-stats`** or **`make db-stats`**: View row counts and health of the local relational database.
+- **`make test`**: Run the full 45-test pytest suite.
 
 ---
 

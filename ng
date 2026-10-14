@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# ng: Ultra-fast shortform CLI runner for NyayaGraph
+# Usage:
+#   ./ng graph-stats
+#   ./ng ask "Prepare brief for OA 985/2019"
+#   ./ng graph-rag "water pollution"
+#   ./ng sync-cause-lists
+#   ./ng serve
+# ==============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PYTHONPATH="$SCRIPT_DIR:${PYTHONPATH}"
+
+# Auto-detect best Python interpreter
+if [ -n "$VIRTUAL_ENV" ] && [ -x "$VIRTUAL_ENV/bin/python" ]; then
+    PYTHON_EXEC="$VIRTUAL_ENV/bin/python"
+elif [ -x "/home/navin/work/packages/miniconda3/bin/python" ]; then
+    PYTHON_EXEC="/home/navin/work/packages/miniconda3/bin/python"
+elif [ -x "$SCRIPT_DIR/venv/bin/python" ]; then
+    PYTHON_EXEC="$SCRIPT_DIR/venv/bin/python"
+else
+    PYTHON_EXEC="python3"
+fi
+
+exec "$PYTHON_EXEC" "$SCRIPT_DIR/cli.py" "$@"

@@ -16,6 +16,7 @@ dependencies = [
 
 [project.scripts]
 nyayagraph = "cli:main"
+ng = "cli:main"
 
 [tool.setuptools.packages.find]
 include = ["nyayagraph*"]
