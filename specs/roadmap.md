@@ -1,4 +1,6 @@
-# LawNidhi Roadmap
+# NyayaGraph Master Roadmap (formerly LawNidhi)
+
+NyayaGraph is the overarching legal intelligence platform and master litigation knowledge graph, featuring **VidhiGraph** as its dedicated statutory and regulatory sub-graph.
 
 ## Completed Phases
 - [x] **Phase 1.1: Legal Ontology & Embedded Graph Engine (Kùzu)** — (Completed)
@@ -12,9 +14,12 @@
 - [x] **Phase 7: Agentic Legal Co-Counsel (Autonomous ReAct Researcher)** — (Completed)
 
 ## Future Roadmap (Enterprise & Domain-Driven Evolution)
-- [ ] **Phase 8: Domain-Driven Refactoring (DDD Bounded Contexts & Clean Architecture)**
-  - Isolate domain layers: Litigation Docket, Judicial Knowledge Graph, Ingestion Engine, and Co-Counsel.
-  - Formalize Aggregates (`CaseAggregate`), Immutable Value Objects (`CaseNumber`, `Citation`, `StatuteSection`), and Domain Events (`CaseListedEvent`, `OrderIngestedEvent`).
+- [ ] **Phase 8: Domain-Driven Refactoring (NyayaGraph & VidhiGraph Subsystems)**
+  - Formalize bounded contexts:
+    - **NyayaGraph Core**: Litigation Docket, Judicial Coram, Appearance Logs, and Precedent Citation Graph.
+    - **VidhiGraph Subsystem**: Dedicated codified law engine (Central & State Acts, Sections, Rules, Gazette Notifications, and Statutory Definitions).
+    - **Co-Counsel Agent**: ReAct research orchestration and structured brief synthesis.
+  - Formalize Aggregates (`CaseAggregate`, `StatuteAggregate`), Immutable Value Objects (`CaseNumber`, `ReporterCitation`, `StatuteSection`), and Domain Events (`CaseListedEvent`, `OrderIngestedEvent`, `StatuteAmendedEvent`).
   - Introduce Hexagonal Architecture (Ports & Adapters) separating domain models from infrastructure (SQLite, Kùzu, FastAPI).
 - [ ] **Phase 9: Distributed Ingestion Pipeline & Scheduled Daemon**
   - Background task queue (Celery/Temporal + Redis) for scheduled morning cause list scraping and automated retries.
