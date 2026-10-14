@@ -1,10 +1,10 @@
 """test_cause_list_graph.py: Unit tests for Cause List Temporal Knowledge Graph."""
 from datetime import date
 import pytest
-from lawnidhi.models.core import ScheduleModel, CaseModel, CounselModel, PartyModel
-from lawnidhi.graph.store import LegalGraphStore
-from lawnidhi.graph.cause_list import ingest_schedule_to_graph
-from lawnidhi.graph.schema import normalize_entity_id, normalize_hearing_id
+from nyayagraph.models.core import ScheduleModel, CaseModel, CounselModel, PartyModel
+from nyayagraph.graph.store import LegalGraphStore
+from nyayagraph.graph.cause_list import ingest_schedule_to_graph
+from nyayagraph.graph.schema import normalize_entity_id, normalize_hearing_id
 
 
 @pytest.fixture

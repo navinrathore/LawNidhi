@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "lawnidhi"
+name = "nyayagraph"
 version = "0.1.0"
-description = "NGT Order Scraper & Legal Case Portfolio Manager"
+description = "NGT Order Scraper & Legal Case Knowledge Graph Manager"
 requires-python = ">=3.10"
 dependencies = [
     "pydantic>=2.4.0",
@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-lawnidhi = "cli:main"
+nyayagraph = "cli:main"
 
 [tool.setuptools.packages.find]
-include = ["lawnidhi*"]
+include = ["nyayagraph*"]

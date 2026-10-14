@@ -3,10 +3,10 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 
-from lawnidhi.graph.store import LegalGraphStore
-from lawnidhi.graph.schema import LegalEntity, LegalRelation
-from lawnidhi.graph.clustering import GraphClusterEngine
-from lawnidhi.server.app import create_app
+from nyayagraph.graph.store import LegalGraphStore
+from nyayagraph.graph.schema import LegalEntity, LegalRelation
+from nyayagraph.graph.clustering import GraphClusterEngine
+from nyayagraph.server.app import create_app
 
 
 @pytest.fixture

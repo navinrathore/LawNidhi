@@ -1,8 +1,8 @@
 import os
 import sqlite3
 import pytest
-from lawnidhi.db.schema import create_tables, DB_PATH
-from lawnidhi.models.core import CaseModel
+from nyayagraph.db.schema import create_tables, DB_PATH
+from nyayagraph.models.core import CaseModel
 
 @pytest.fixture(scope="module")
 def setup_database():

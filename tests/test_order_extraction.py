@@ -1,11 +1,11 @@
 """test_order_extraction.py: Unit tests for Phase 2 Order Triplet Extraction and Precedent Graph Linkage."""
 import os
 import pytest
-from lawnidhi.parsers.ngt.statute_parser import StatuteParser
-from lawnidhi.parsers.ngt.order_parser import NGTOrderParser
-from lawnidhi.graph.order_sync import ingest_order_extraction
-from lawnidhi.graph.store import LegalGraphStore
-from lawnidhi.graph.schema import (
+from nyayagraph.parsers.ngt.statute_parser import StatuteParser
+from nyayagraph.parsers.ngt.order_parser import NGTOrderParser
+from nyayagraph.graph.order_sync import ingest_order_extraction
+from nyayagraph.graph.store import LegalGraphStore
+from nyayagraph.graph.schema import (
     OrderExtractionResult,
     StatuteReference,
     PrecedentCitation,

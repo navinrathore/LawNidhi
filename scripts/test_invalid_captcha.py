@@ -1,4 +1,4 @@
-from lawnidhi.scraper.dynamic_search import DynamicSearchAPI
+from nyayagraph.scraper.dynamic_search import DynamicSearchAPI
 
 def test_invalid_captcha():
     api = DynamicSearchAPI()

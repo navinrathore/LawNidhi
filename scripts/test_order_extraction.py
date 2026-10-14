@@ -1,4 +1,4 @@
-from lawnidhi.scraper.ngt_order_scraper import NGTOrderScraper
+from nyayagraph.scraper.ngt_order_scraper import NGTOrderScraper
 
 test_html = """
 <table class="table-bordered customtable" width="100%">

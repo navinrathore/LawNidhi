@@ -3,13 +3,13 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 
-from lawnidhi.graph.store import LegalGraphStore
-from lawnidhi.graph.schema import LegalEntity, LegalRelation
-from lawnidhi.rag.vector_store import LegalDocumentStore
-from lawnidhi.rag.graph_expander import GraphContextExpander
-from lawnidhi.rag.hybrid_retriever import HybridGraphRAGRetriever
-from lawnidhi.rag.synthesizer import LegalSynthesizer
-from lawnidhi.server.app import create_app
+from nyayagraph.graph.store import LegalGraphStore
+from nyayagraph.graph.schema import LegalEntity, LegalRelation
+from nyayagraph.rag.vector_store import LegalDocumentStore
+from nyayagraph.rag.graph_expander import GraphContextExpander
+from nyayagraph.rag.hybrid_retriever import HybridGraphRAGRetriever
+from nyayagraph.rag.synthesizer import LegalSynthesizer
+from nyayagraph.server.app import create_app
 
 
 @pytest.fixture

@@ -1,6 +1,6 @@
-# LawNidhi GraphRAG & GraphDB Architecture
+# NyayaGraph GraphRAG & GraphDB Architecture
 
-This document outlines the architecture and execution flow of the LawNidhi Hybrid GraphRAG system. It combines local dense/sparse text retrieval with a Kùzu-backed Knowledge Graph to achieve highly accurate, deterministic, and citation-grounded legal intelligence.
+This document outlines the architecture and execution flow of the NyayaGraph Hybrid GraphRAG system (featuring the VidhiGraph statutory knowledge sub-engine). It combines local dense/sparse text retrieval with a Kùzu-backed Knowledge Graph to achieve highly accurate, deterministic, and citation-grounded legal intelligence.
 
 ## System Components
 

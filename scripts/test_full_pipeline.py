@@ -1,6 +1,6 @@
 import time
 import os
-from lawnidhi.scraper.dynamic_search import DynamicSearchAPI
+from nyayagraph.scraper.dynamic_search import DynamicSearchAPI
 
 def run_ipc_pipeline():
     api = DynamicSearchAPI()

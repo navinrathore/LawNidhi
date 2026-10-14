@@ -1,4 +1,4 @@
-from lawnidhi.scraper.ngt_order_scraper import NGTOrderScraper
+from nyayagraph.scraper.ngt_order_scraper import NGTOrderScraper
 
 def test_fetch_orders():
     url = "https://www.greentribunal.gov.in/caseDetails/DELHI/0701102002572025?page=order"

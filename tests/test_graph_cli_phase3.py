@@ -1,7 +1,7 @@
 import os
 import pytest
-from lawnidhi.graph.store import LegalGraphStore
-from lawnidhi.graph.schema import LegalEntity, LegalRelation
+from nyayagraph.graph.store import LegalGraphStore
+from nyayagraph.graph.schema import LegalEntity, LegalRelation
 
 @pytest.fixture
 def graph_store(tmp_path):

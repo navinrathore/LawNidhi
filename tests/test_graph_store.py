@@ -3,13 +3,13 @@ import os
 import sqlite3
 import pytest
 import networkx as nx
-from lawnidhi.graph.schema import (
+from nyayagraph.graph.schema import (
     LegalEntity,
     LegalRelation,
     GraphExtraction,
     normalize_entity_id,
 )
-from lawnidhi.graph.store import LegalGraphStore
+from nyayagraph.graph.store import LegalGraphStore
 
 
 @pytest.fixture
@@ -182,7 +182,7 @@ def test_export_networkx_graph(graph_store):
 
 def test_sync_from_sqlite(graph_store, tmp_path):
     """Verify syncing relational cases, counsels, and parties from SQLite."""
-    sqlite_file = str(tmp_path / "test_lawnidhi.db")
+    sqlite_file = str(tmp_path / "test_nyayagraph.db")
     conn = sqlite3.connect(sqlite_file)
     cursor = conn.cursor()
     cursor.execute("""

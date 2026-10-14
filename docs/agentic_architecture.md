@@ -1,11 +1,11 @@
 # Agentic Architecture & Design Patterns
 
-This document captures the architectural decisions and agentic workflows to be used in LawNidhi, drawing upon the lessons learned from the `Data Analyst Agent` and `TowerOfHanoi` projects.
+This document captures the architectural decisions and agentic workflows to be used in NyayaGraph, drawing upon the lessons learned from the `Data Analyst Agent` and `TowerOfHanoi` projects.
 
 ## 1. The ReAct Loop (Reasoning and Acting)
 For general exploratory queries (like "How many cases are OPEN in July?"), we use a custom-built ReAct loop.
 - **Safety Nets**: Always implement a strict `max_loops` threshold (e.g., 10-15 loops).
-- **Execution Sandboxing**: Raw subprocess execution is highly dangerous. If Python execution is ever introduced, it MUST run within a sandboxed environment (Docker or a microVM). For LawNidhi, our agents only interact with a read-only or strictly bounded SQLite tool.
+- **Execution Sandboxing**: Raw subprocess execution is highly dangerous. If Python execution is ever introduced, it MUST run within a sandboxed environment (Docker or a microVM). For NyayaGraph, our agents only interact with a read-only or strictly bounded SQLite tool.
 
 ## 2. Provider Agnostic LLM Interface
 Never hardcode tools into Anthropic or OpenAI specific SDKs.

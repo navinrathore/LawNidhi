@@ -1,7 +1,7 @@
 import time
 import os
 from bs4 import BeautifulSoup
-from lawnidhi.scraper.dynamic_search import DynamicSearchAPI
+from nyayagraph.scraper.dynamic_search import DynamicSearchAPI
 
 api = DynamicSearchAPI()
 api.get_captcha()

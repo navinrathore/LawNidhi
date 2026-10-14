@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 import argparse
 import sys
-from lawnidhi.db.schema import create_tables
-from lawnidhi.parsers.ngt.cause_list_parser import NGTCauseListParser
-from lawnidhi.db.ingest import ingest_schedule
-from lawnidhi.app.reports import generate_counsel_appearance_log
-from lawnidhi.scraper.ngt_order_scraper import NGTOrderScraper
-from lawnidhi.scraper.dynamic_search import DynamicSearchAPI
-from lawnidhi.scraper.ngt_cause_list_scraper import NGTCauseListScraper
-from lawnidhi.db import my_cases_repo, cause_list_repo
-from lawnidhi import config
-from lawnidhi.app import queries
+from nyayagraph.db.schema import create_tables
+from nyayagraph.parsers.ngt.cause_list_parser import NGTCauseListParser
+from nyayagraph.db.ingest import ingest_schedule
+from nyayagraph.app.reports import generate_counsel_appearance_log
+from nyayagraph.scraper.ngt_order_scraper import NGTOrderScraper
+from nyayagraph.scraper.dynamic_search import DynamicSearchAPI
+from nyayagraph.scraper.ngt_cause_list_scraper import NGTCauseListScraper
+from nyayagraph.db import my_cases_repo, cause_list_repo
+from nyayagraph import config
+from nyayagraph.app import queries
 
 def parse_case_input(case_input: str) -> tuple:
     """Parse case input in '83/2025' or '83 2025' format into (case_no, case_year)."""
@@ -33,7 +33,8 @@ def _resolve_case_args(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="LawNidhi: NGT Order Scraper & Case Portfolio Manager",
+        prog="nyayagraph",
+        description="NyayaGraph: Autonomous Litigation Intelligence & Legal Knowledge Graph Platform",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 \033[92mUsage Groups:\033[0m
@@ -494,8 +495,8 @@ def main():
 
     elif args.command == "graph-stats":
         import os
-        from lawnidhi.graph.store import LegalGraphStore
-        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        from nyayagraph.graph.store import LegalGraphStore
+        db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
         store = LegalGraphStore(db_path=db_path)
         stats = store.get_graph_stats()
         print("\n\033[92m🏛️  Knowledge Graph Statistics (Kùzu DB):\033[0m")
@@ -510,9 +511,9 @@ def main():
     elif args.command == "graph-sync":
         import glob
         import os
-        from lawnidhi.parsers.ngt.cause_list_parser import NGTCauseListParser
-        from lawnidhi.graph.cause_list import ingest_schedule_to_graph
-        from lawnidhi.graph.store import LegalGraphStore
+        from nyayagraph.parsers.ngt.cause_list_parser import NGTCauseListParser
+        from nyayagraph.graph.cause_list import ingest_schedule_to_graph
+        from nyayagraph.graph.store import LegalGraphStore
 
         target_dir = args.dir or os.path.join(os.path.dirname(__file__), "data", "cause_lists")
         pdf_files = sorted(glob.glob(os.path.join(target_dir, "*.pdf")))
@@ -522,7 +523,7 @@ def main():
 
         print(f"\n\033[92m🔄 Syncing {len(pdf_files)} Cause List PDFs into Knowledge Graph...\033[0m")
         parser_inst = NGTCauseListParser()
-        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
         store = LegalGraphStore(db_path=db_path)
 
         total_cases = 0
@@ -543,8 +544,8 @@ def main():
 
     elif args.command == "graph-timeline":
         import os
-        from lawnidhi.graph.store import LegalGraphStore
-        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        from nyayagraph.graph.store import LegalGraphStore
+        db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
         store = LegalGraphStore(db_path=db_path)
         history = store.get_case_listing_history(args.case)
         if not history:
@@ -564,7 +565,7 @@ def main():
     elif args.command == "graph-daily-board":
         import os
         from datetime import date, timedelta
-        from lawnidhi.graph.store import LegalGraphStore
+        from nyayagraph.graph.store import LegalGraphStore
 
         date_arg = args.date.lower() if args.date else "today"
         if date_arg == "today":
@@ -574,7 +575,7 @@ def main():
         else:
             target_date = args.date
 
-        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
         store = LegalGraphStore(db_path=db_path)
         cases = store.get_cases_listed_on_date(target_date, court_no=args.court)
         if not cases:
@@ -595,7 +596,7 @@ def main():
     elif args.command == "graph-counsel-cases":
         import os
         from datetime import date, datetime, timedelta
-        from lawnidhi.graph.store import LegalGraphStore
+        from nyayagraph.graph.store import LegalGraphStore
 
         start_arg = args.start.lower() if args.start else "today"
         if start_arg == "today":
@@ -617,7 +618,7 @@ def main():
             start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
             end_date = (start_dt + timedelta(days=max(0, args.days - 1))).isoformat()
 
-        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
         store = LegalGraphStore(db_path=db_path)
         appearances = store.get_counsel_schedule(args.counsel, start_date=start_date, end_date=end_date)
         
@@ -639,7 +640,7 @@ def main():
     elif args.command == "graph-counsel-clashes":
         import os
         from datetime import date, timedelta
-        from lawnidhi.graph.store import LegalGraphStore
+        from nyayagraph.graph.store import LegalGraphStore
 
         date_arg = args.date.lower() if args.date else "today"
         if date_arg == "today":
@@ -650,7 +651,7 @@ def main():
             target_date = args.date
 
         counsel_name = args.counsel or config.get_counsel_name()
-        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
         store = LegalGraphStore(db_path=db_path)
         clashes = store.find_counsel_clashes(target_date, counsel_name)
         if not clashes:
@@ -664,8 +665,8 @@ def main():
 
     elif args.command == "graph-precedents":
         import os
-        from lawnidhi.graph.store import LegalGraphStore
-        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        from nyayagraph.graph.store import LegalGraphStore
+        db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
         store = LegalGraphStore(db_path=db_path)
         
         precedents = store.find_connected_precedents(args.case)
@@ -684,8 +685,8 @@ def main():
 
     elif args.command == "graph-counsel-portfolio":
         import os
-        from lawnidhi.graph.store import LegalGraphStore
-        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        from nyayagraph.graph.store import LegalGraphStore
+        db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
         store = LegalGraphStore(db_path=db_path)
         
         portfolio = store.get_counsel_portfolio(args.counsel)
@@ -715,8 +716,8 @@ def main():
 
     elif args.command == "graph-judge-bench":
         import os
-        from lawnidhi.graph.store import LegalGraphStore
-        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        from nyayagraph.graph.store import LegalGraphStore
+        db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
         store = LegalGraphStore(db_path=db_path)
         
         caseload = store.get_judge_caseload(args.judge)
@@ -738,8 +739,8 @@ def main():
 
     elif args.command == "graph-query":
         import os
-        from lawnidhi.graph.store import LegalGraphStore
-        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        from nyayagraph.graph.store import LegalGraphStore
+        db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
         store = LegalGraphStore(db_path=db_path)
         
         try:
@@ -754,8 +755,8 @@ def main():
 
     elif args.command == "graph-export":
         import os
-        from lawnidhi.graph.store import LegalGraphStore
-        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        from nyayagraph.graph.store import LegalGraphStore
+        db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
         store = LegalGraphStore(db_path=db_path)
         
         try:
@@ -772,9 +773,9 @@ def main():
 
     elif args.command == "graph-extract-order":
         import os
-        from lawnidhi.parsers.ngt.order_parser import NGTOrderParser
-        from lawnidhi.graph.order_sync import ingest_order_extraction
-        from lawnidhi.graph.store import LegalGraphStore
+        from nyayagraph.parsers.ngt.order_parser import NGTOrderParser
+        from nyayagraph.graph.order_sync import ingest_order_extraction
+        from nyayagraph.graph.store import LegalGraphStore
 
         pdf_path = args.pdf_path
         if not os.path.exists(pdf_path):
@@ -807,7 +808,7 @@ def main():
                 print(f"  • {p.case_title} ({p.citation or 'Citation N/A'}) - {p.court}")
 
         if args.ingest:
-            db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+            db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
             store = LegalGraphStore(db_path=db_path)
             stats = ingest_order_extraction(store, extraction)
             print(f"\n\033[92m✓ Successfully merged into Knowledge Graph (+{stats['nodes_added']} nodes, +{stats['relations_added']} relations).\033[0m")
@@ -815,13 +816,13 @@ def main():
 
     elif args.command == "graph-sync-orders":
         import os
-        from lawnidhi.graph.order_sync import sync_all_orders
-        from lawnidhi.graph.store import LegalGraphStore
+        from nyayagraph.graph.order_sync import sync_all_orders
+        from nyayagraph.graph.store import LegalGraphStore
 
         orders_dir = args.dir or os.path.join(os.path.dirname(__file__), "data", "orders")
         print(f"\n\033[96m🚀 Ingesting all order PDFs from: {orders_dir}...\033[0m")
         
-        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
         store = LegalGraphStore(db_path=db_path)
         summary = sync_all_orders(store, orders_dir)
 
@@ -841,16 +842,16 @@ def main():
         print(f"\n\033[92m🚀 Starting LawNidhi REST API Server at http://{args.host}:{args.port}...\033[0m")
         print(f"📖 Interactive Swagger Docs: http://{args.host}:{args.port}/docs")
         print(f"📖 ReDoc Documentation   : http://{args.host}:{args.port}/redoc\n")
-        uvicorn.run("lawnidhi.server.app:app", host=args.host, port=args.port, reload=args.reload)
+        uvicorn.run("nyayagraph.server.app:app", host=args.host, port=args.port, reload=args.reload)
 
     elif args.command == "graph-rag":
         import os
-        from lawnidhi.graph.store import LegalGraphStore
-        from lawnidhi.rag.vector_store import LegalDocumentStore
-        from lawnidhi.rag.hybrid_retriever import HybridGraphRAGRetriever
-        from lawnidhi.rag.synthesizer import LegalSynthesizer
+        from nyayagraph.graph.store import LegalGraphStore
+        from nyayagraph.rag.vector_store import LegalDocumentStore
+        from nyayagraph.rag.hybrid_retriever import HybridGraphRAGRetriever
+        from nyayagraph.rag.synthesizer import LegalSynthesizer
 
-        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
         orders_dir = os.path.join(os.path.dirname(__file__), "data", "orders")
 
         print(f"\n\033[96m🔍 Running Hybrid GraphRAG Query: '{args.query}'...\033[0m")
@@ -879,10 +880,10 @@ def main():
 
     elif args.command == "graph-communities":
         import os
-        from lawnidhi.graph.store import LegalGraphStore
-        from lawnidhi.graph.clustering import GraphClusterEngine
+        from nyayagraph.graph.store import LegalGraphStore
+        from nyayagraph.graph.clustering import GraphClusterEngine
 
-        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
         store = LegalGraphStore(db_path=db_path)
         engine = GraphClusterEngine(store)
 
@@ -901,11 +902,11 @@ def main():
 
     elif args.command == "ask":
         import os
-        from lawnidhi.graph.store import LegalGraphStore
-        from lawnidhi.rag.vector_store import LegalDocumentStore
-        from lawnidhi.agent.co_counsel import AgenticCoCounsel
+        from nyayagraph.graph.store import LegalGraphStore
+        from nyayagraph.rag.vector_store import LegalDocumentStore
+        from nyayagraph.agent.co_counsel import AgenticCoCounsel
 
-        db_path = os.path.join(os.path.dirname(__file__), "data", "lawnidhi_graph", "kuzu_db")
+        db_path = os.path.join(os.path.dirname(__file__), "data", "nyayagraph_graph", "kuzu_db")
         graph_store = LegalGraphStore(db_path=db_path)
         doc_store = LegalDocumentStore()
         orders_dir = os.path.join(os.path.dirname(__file__), "data", "orders")

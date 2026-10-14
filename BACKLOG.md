@@ -1,6 +1,6 @@
-# 🏛️ LawNidhi AI Master Backlog
+# 🏛️ NyayaGraph AI Master Backlog (incorporating VidhiGraph)
 
-This is the persistent record of all features, optimizations, and roadmap items for the LawNidhi AI Legal Workspace.
+This is the persistent record of all features, optimizations, and roadmap items for the NyayaGraph Legal Knowledge Graph Platform.
 
 ## 🟢 [COMPLETED & READY]
 - [x] **DONE** `[CORE]` **Unified RAG Parity** `***`: Parity between General and Litigation notebooks for document indexing.
